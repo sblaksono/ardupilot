@@ -219,5 +219,6 @@ bool SRV_Channel::should_e_stop(SRV_Channel::Aux_servo_function_t function)
             function == SRV_Channel::k_starter || function == SRV_Channel::k_throttle ||
             function == SRV_Channel::k_throttleLeft || function == SRV_Channel::k_throttleRight ||
             (function >= SRV_Channel::k_boost_throttle && function <= SRV_Channel::k_motor12) ||
+			(function >= SRV_Channel::k_front_right_coxa && function <= SRV_Channel::k_back_right_tibia) ||
             function == k_engine_run_enable);
 }
