@@ -1,7 +1,7 @@
 # hw definition file for processing by chibios_pins.py
 # Omnibus F4 AIO (no current sensor onboard) boards
 # with F405 mcu, mpu6000 imu, bmp280 barometer, 7456 series osd  and sdcard
-# add 3 extra PWM outputs
+# add up to 6 extra PWM outputs
 
 include ../omnibusf4pro/hwdef.dat
 
@@ -12,16 +12,38 @@ undef PC9
 # board ID for firmware load
 APJ_BOARD_ID 1002
 
+# order of UARTs
+undef SERIAL_ORDER
+SERIAL_ORDER OTG1 USART1 USART3 USART6 UART4 USART2
+
 #Omnibus F4 AIO V3 and later had hw inverter on UART6
 #Overide it to use as GPS UART port
 PC8 SBUS_INVERT_RX OUTPUT LOW
 PC9 SBUS_INVERT_TX OUTPUT LOW
 
 #extra pwm outputs
+undef PB6
 undef PB8
-PB6 TIM4_CH1  TIM4 PWM(7) GPIO(57)
+PB6 TIM4_CH1  TIM4 PWM(7) GPIO(70)
 PB8 TIM4_CH3  TIM4 PWM(8) GPIO(60)
 PB9 TIM4_CH4  TIM4 PWM(9) GPIO(61)
+
+#use PA0 (RSSI) and PA1 (PWM5) as UART4, PA2 (PWM4) and PA3 (PWM3) as USART2 with BRD_ALT_CONFIG=6
+PA0 UART4_TX UART4 ALT(6)
+PA1 UART4_RX UART4 ALT(6)
+PA2 USART2_TX USART2 ALT(6)
+PA3 USART2_RX USART2 ALT(6)
+
+#use PA0 (RSSI) and PA1 (PWM5) as UART4, PA3 (PWM3) as USART2 RX with BRD_ALT_CONFIG=7
+PA0 UART4_TX UART4 ALT(7)
+PA1 UART4_RX UART4 ALT(7)
+PA3 USART2_RX USART2 ALT(7)
+
+#extra pwm outputs with BRD_ALT_CONFIG>=10
+PA0 TIM2_CH1  TIM2 PWM(10) GPIO(62) ALT(10)
+PA0 TIM2_CH1  TIM2 PWM(10) GPIO(62) ALT(12)
+PC6 TIM8_CH1  TIM8 PWM(11) GPIO(63) ALT(12)
+PC7 TIM8_CH2  TIM8 PWM(12) GPIO(64) ALT(12)
 
 undef BOARD_PWM_COUNT_DEFAULT
 define BOARD_PWM_COUNT_DEFAULT 9
