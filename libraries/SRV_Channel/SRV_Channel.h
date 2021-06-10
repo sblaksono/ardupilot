@@ -174,6 +174,18 @@ public:
         k_trim                  = 135,  // always outputs SERVOn_TRIM
         k_max                   = 136,  // always outputs SERVOn_MAX
         k_mast_rotation         = 137,
+		k_front_right_coxa 		= 201,
+		k_front_right_femur 	= 202,
+		k_front_right_tibia 	= 203,
+		k_front_left_coxa 		= 204,
+		k_front_left_femur 		= 205,
+		k_front_left_tibia 		= 206,
+		k_back_left_coxa 		= 207,
+		k_back_left_femur 		= 208,
+		k_back_left_tibia 		= 209,
+		k_back_right_coxa 		= 210,
+		k_back_right_femur 		= 211,
+		k_back_right_tibia		= 212,	
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 
