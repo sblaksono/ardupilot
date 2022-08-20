@@ -110,6 +110,106 @@ const AP_Param::GroupInfo AP_MotorsUGV::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("VEC_ANGLEMAX", 13, AP_MotorsUGV, _vector_angle_max, 0.0f),
 
+    // @Param: QBDY_ROT_MAX
+    // @DisplayName: Body Rotation Maximum
+    // @Description: Body rotation maximum for any individual axis
+    // @Units: deg
+    // @Range: 0 90
+    // @User: Advanced
+    AP_GROUPINFO("QBDY_ROT_MAX", 14, AP_MotorsUGV, _body_rot_max, 10.0f),
+
+    // @Param: QXY_TRA_MAX
+    // @DisplayName: X and Y Axis Travel Maximum
+    // @Description: X and Y axis travel max in mm
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    AP_GROUPINFO("QXY_TRA_MAX", 15, AP_MotorsUGV, _xy_travel_max, 80.0f),
+
+    // @Param: QYAW_TRA_MAX
+    // @DisplayName: Yaw Travel Maximum
+    // @Description: Yaw travel maximum
+    // @Units: deg
+    // @Range: 0 45
+    // @User: Advanced
+    AP_GROUPINFO("QYAW_TRA_MAX", 16, AP_MotorsUGV, _yaw_travel_max, 10.0f),
+
+    // @Param: QHEIGHT_MAX
+    // @DisplayName: Height Maximum
+    // @Description: Height maximum
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    AP_GROUPINFO("QHEIGHT_MAX", 17, AP_MotorsUGV, _height_max, 40.0f),
+
+    // @Param: QTRAVEL_DZ
+    // @DisplayName: Travel Deadzone
+    // @Description: Travel deadzone.  x, y and yaw travel requests are ignored if their absolute value is less than this number
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    AP_GROUPINFO("QTRAVEL_DZ", 18, AP_MotorsUGV, _travel_dz, 5.0f),
+
+    // @Param: QLEG_LIFT_HT
+    // @DisplayName: Leg Lift Height
+    // @Description: Leg lift height (in mm) while walking
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    AP_GROUPINFO("QLEG_LIFT_HT", 19, AP_MotorsUGV, _leg_lift_height, 50.0f),
+	
+    // @Param: QGAIT_TYPE
+    // @DisplayName: Body Rotation Maximum
+    // @Description: gait pattern.  0 = alternating gait, 1 = wave gait.
+    // @Values: 0:Alternating,1:Wave
+    // @User: Advanced
+    AP_GROUPINFO("QGAIT_TYPE", 20, AP_MotorsUGV, _gait_type, 0),
+
+   // @Param: QFRAME_LEN
+    // @DisplayName: Frame Length
+    // @Description: frame length in mm
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QFRAME_LEN", 21, AP_MotorsUGV, _frame_len, 80.0f),
+
+    // @Param: QFRAME_WIDTH
+    // @DisplayName: Frame Width
+    // @Description: frame width in mm
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QFRAME_WIDTH", 22, AP_MotorsUGV, _frame_width, 150.0f),
+
+    // @Param: QFRAME_COXA
+    // @DisplayName: Coxa Length
+    // @Description: Distance (in mm) from coxa (aka hip) servo to femur servo
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QFRAME_COXA", 23, AP_MotorsUGV, _coxa_len, 30.0f),
+
+    // @Param: QFRAME_FEMUR
+    // @DisplayName: Femur Length
+    // @Description: Distance (in mm) from femur servo to tibia servo
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QFRAME_FEMUR", 24, AP_MotorsUGV, _femur_len, 85.0f),
+
+    // @Param: QFRAME_TIBIA
+    // @DisplayName: Tibia Length
+    // @Description: Distance (in mm) from tibia servo to foot
+    // @Units: mm
+    // @Range: 0 1000
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QFRAME_TIBIA", 25, AP_MotorsUGV, _tibia_len, 125.0f),
+	
     AP_GROUPEND
 };
 
@@ -134,8 +234,12 @@ void AP_MotorsUGV::init(uint8_t frtype)
     // set safety output
     setup_safety_output();
 
+    // setup for quadruped
+    if (_frame_type == FRAME_TYPE_QUADRUPED) {
+        setup_quadruped();
+    }
     // setup for omni vehicles
-    if (_frame_type != FRAME_TYPE_UNDEFINED) {
+    else if (_frame_type != FRAME_TYPE_UNDEFINED) {
         setup_omni();
     }
 }
@@ -305,6 +409,9 @@ void AP_MotorsUGV::output(bool armed, float ground_speed, float dt)
 
     // output for omni frames
     output_omni(armed, _steering, _throttle, _lateral);
+
+    // output for quadruped
+    output_quadruped(armed, _steering, _throttle, _lateral, _roll, _pitch, _walking_height);
 
     // output to sails
     output_sail();
@@ -547,6 +654,7 @@ void AP_MotorsUGV::setup_omni()
 
     //   FRAME TYPE NAME
     case FRAME_TYPE_UNDEFINED:
+	case FRAME_TYPE_QUADRUPED:
         break;
 
     case FRAME_TYPE_OMNI3:
@@ -779,8 +887,8 @@ void AP_MotorsUGV::output_skid_steering(bool armed, float steering, float thrott
 // output for omni frames
 void AP_MotorsUGV::output_omni(bool armed, float steering, float throttle, float lateral)
 {
-    // exit immediately if the frame type is set to UNDEFINED
-    if (_frame_type == FRAME_TYPE_UNDEFINED) {
+    // exit immediately if the frame type is set to UNDEFINED or QUADRUPED
+    if (_frame_type <= FRAME_TYPE_UNDEFINED || _frame_type >= FRAME_TYPE_QUADRUPED) {
         return;
     }
 
@@ -833,6 +941,352 @@ void AP_MotorsUGV::output_omni(bool armed, float steering, float throttle, float
             }
         }
     }
+}
+
+// setup for quadrupeds
+void AP_MotorsUGV::setup_quadruped() {
+	_endpoint_LB[0] = cosf(ToRad(45))*(_coxa_len + _femur_len);
+	_endpoint_LB[1] = sinf(ToRad(45))*(_coxa_len + _femur_len);
+	_endpoint_LB[2] = _tibia_len;
+	_endpoint_LF[0] = cosf(ToRad(45))*(_coxa_len + _femur_len);
+	_endpoint_LF[1] = sinf(ToRad(-45))*(_coxa_len + _femur_len); 
+	_endpoint_LF[2] = _tibia_len;
+	_endpoint_RF[0] = -cosf(ToRad(45))*(_coxa_len + _femur_len);
+	_endpoint_RF[1] = sinf(ToRad(-45))*(_coxa_len + _femur_len);
+	_endpoint_RF[2] = _tibia_len;
+	_endpoint_RB[0] = -cosf(ToRad(45))*(_coxa_len + _femur_len); 
+	_endpoint_RB[1] = sinf(ToRad(45))*(_coxa_len + _femur_len); 
+	_endpoint_RB[2] = _tibia_len;
+}
+
+void AP_MotorsUGV::gaitselect() {
+    if (_gait_type == 0) {
+        // alternating gait
+        _gait_step_total = 6;
+        _gait_step_leg_start[0] = 1;
+		_gait_step_leg_start[1] = 4;
+		_gait_step_leg_start[2] = 4;
+		_gait_step_leg_start[3] = 1;
+        _gait_lifted_steps = 2;
+        _gait_down_steps = 1;
+        _gait_lift_divisor = 2;
+        _gait_half_lift_height = 1;
+        _gait_travel_divisor = 4;
+    }
+	else if (_gait_type == 1) {
+        // wave gait with 28 steps
+        _gait_step_total = 28;
+		_gait_step_leg_start[0] = 8;
+		_gait_step_leg_start[1] = 15;
+		_gait_step_leg_start[2] = 1;
+		_gait_step_leg_start[3] = 22;
+        _gait_lifted_steps = 3;
+        _gait_down_steps = 2;
+        _gait_lift_divisor = 2;
+        _gait_half_lift_height = 3;
+        _gait_travel_divisor = 24;
+    }
+}
+
+// Calculate Gait sequence
+void AP_MotorsUGV::calc_gait_sequence() {
+    int move_requested = (abs(_x_travel) > _travel_dz) or (abs(_y_travel) > _travel_dz) or (abs(_yaw_travel) > _travel_dz);
+
+    if (move_requested) {
+		for (uint8_t leg_index = 0; leg_index < 4; leg_index++) {
+            update_leg(leg_index,move_requested);
+        }
+
+        _gait_step = _gait_step + 1;
+        if (_gait_step > _gait_step_total) {
+            _gait_step = 1;
+        }
+	}
+    else {
+		for (uint8_t i = 0; i < 4; i++) {
+			_gait_pos_x[i] = 0;
+			_gait_pos_y[i] = 0;
+			_gait_pos_z[i] = 0;
+			_gait_rot_z[i] = 0;
+		}
+    }
+}
+
+// in order for the robot to move forward it needs to move its legs in a
+// specific order and this is repeated over and over to attain linear motion. when a
+// specific leg number is passed the update_leg() produces the set of values for the
+// given leg at that step, for each cycle of the gait each leg will move to a set
+// distance which is decided by the x_travel, yaw_travel, y_travel
+void AP_MotorsUGV::update_leg(int moving_leg, int move_requested) {
+    int leg_step = _gait_step - _gait_step_leg_start[moving_leg];
+    
+    if ((move_requested && (_gait_lifted_steps > 0) && leg_step==0) ||
+        (!move_requested && leg_step==0 && ((_gait_pos_x[moving_leg]>2) ||
+        (_gait_pos_y[moving_leg]>2) || (_gait_rot_z[moving_leg] >2)))) {
+        _gait_pos_x[moving_leg] = 0;
+        _gait_pos_z[moving_leg] = -_leg_lift_height;
+        _gait_pos_y[moving_leg] = 0;
+        _gait_rot_z[moving_leg] = 0;
+	}
+    else if (((_gait_lifted_steps==2 && leg_step==0) || (_gait_lifted_steps>=3 &&
+            (leg_step==-1 || leg_step==(_gait_step_total-1)))) && move_requested) {
+        _gait_pos_x[moving_leg] = -_x_travel/_gait_lift_divisor;
+        _gait_pos_z[moving_leg] = -3*_leg_lift_height/(3+_gait_half_lift_height);
+        _gait_pos_y[moving_leg] = -_y_travel/_gait_lift_divisor;
+        _gait_rot_z[moving_leg] = -_yaw_travel/_gait_lift_divisor;
+	}
+    else if ((_gait_lifted_steps>=2) && (leg_step==1 || leg_step==-(_gait_step_total-1)) && move_requested) {
+        _gait_pos_x[moving_leg] = _x_travel/_gait_lift_divisor;
+        _gait_pos_z[moving_leg] = -3*_leg_lift_height/(3+_gait_half_lift_height);
+        _gait_pos_y[moving_leg] = _y_travel/_gait_lift_divisor;
+        _gait_rot_z[moving_leg] = _yaw_travel/_gait_lift_divisor;
+	}
+    else if (((_gait_lifted_steps==5 && (leg_step==-2 ))) && move_requested) {
+        _gait_pos_x[moving_leg] = -_x_travel * 0.5;
+        _gait_pos_z[moving_leg] = -_leg_lift_height * 0.5;
+        _gait_pos_y[moving_leg] = -_y_travel * 0.5;
+        _gait_rot_z[moving_leg] = -_yaw_travel * 0.5;
+	}
+    else if ((_gait_lifted_steps==5) && (leg_step==2 || leg_step==-(_gait_step_total-2)) && move_requested) {
+        _gait_pos_x[moving_leg] = _x_travel * 0.5;
+        _gait_pos_z[moving_leg] = -_leg_lift_height * 0.5;
+        _gait_pos_y[moving_leg] = _y_travel * 0.5;
+        _gait_rot_z[moving_leg] = _yaw_travel * 0.5;
+	}
+    else if ((leg_step==_gait_down_steps || leg_step==-(_gait_step_total-_gait_down_steps)) && _gait_pos_y[moving_leg]<0) {
+        _gait_pos_x[moving_leg] = _x_travel * 0.5;
+        _gait_pos_z[moving_leg] = 0;
+        _gait_pos_y[moving_leg] = _y_travel * 0.5;
+        _gait_rot_z[moving_leg] = _yaw_travel * 0.5;
+	}
+    else {
+        _gait_pos_x[moving_leg] = _gait_pos_x[moving_leg] - (_x_travel/_gait_travel_divisor);
+        _gait_pos_z[moving_leg] = 0;
+        _gait_pos_y[moving_leg] = _gait_pos_y[moving_leg] - (_y_travel/_gait_travel_divisor);
+        _gait_rot_z[moving_leg] = _gait_rot_z[moving_leg] - (_yaw_travel/_gait_travel_divisor);
+    }
+}
+
+// Body Forward Kinematics calculates where each leg should be.
+// inputs are
+//   a) body rotations: body_rot_x, body_rot_y, body_rot_z
+//   b) body position: body_pos_x, body_pos_y, body_pos_z
+//   c) offset of the center of body
+void AP_MotorsUGV::body_forward_kinematics(float* ans, float X, float Y, float Z, float Xdist, float Ydist, float Zrot) {
+    float totaldist_x = X + Xdist + _body_pos_x;
+    float totaldist_y = Y + Ydist + _body_pos_y;
+    float distBodyCenterFeet = sqrtf((totaldist_x*totaldist_x) + (totaldist_y*totaldist_y));
+    float AngleBodyCenter = atan2f(totaldist_y, totaldist_x);
+    float rolly = tanf(ToRad(_body_rot_y)) * totaldist_x;
+    float pitchy = tanf(ToRad(_body_rot_x)) * totaldist_y;
+
+    ans[0] = cosf(AngleBodyCenter + ToRad(_body_rot_z+Zrot)) * distBodyCenterFeet - totaldist_x + _body_pos_x;
+    ans[1] = sinf(AngleBodyCenter + ToRad(_body_rot_z+Zrot)) * distBodyCenterFeet - totaldist_y + _body_pos_y;
+    ans[2] = rolly + pitchy + _body_pos_z;
+}
+
+// Leg Inverse Kinematics calculates the angles for each servo of each joint using the output of the
+// body_forward_kinematics() function which gives the origin of each leg on the body frame
+void AP_MotorsUGV::leg_inverse_kinematics(float* angles, float x, float y, float z) {
+    float coxa = ToDeg(atan2f(x, y));
+    float trueX = sqrtf((x*x) + (y*y)) - _coxa_len;
+    float im = sqrtf((trueX*trueX) + (z*z));
+
+    float q1 = -atan2f(z, trueX);
+    float d1 = (_femur_len*_femur_len) - (_tibia_len*_tibia_len) + (im*im);
+    float d2 = 2*_femur_len*im;
+    float q2 = acosf(d1/d2);
+    float femur = ToDeg(q1+q2);
+
+    d1 = (_femur_len*_femur_len) - (im*im) + (_tibia_len*_tibia_len);
+    d2 = 2*_tibia_len*_femur_len;
+    float tibia = ToDeg(acosf(d1/d2)-ToRad(90));
+
+	angles[0] = coxa;
+	angles[1] = -femur;
+	angles[2] = -tibia;
+}
+
+// checks if the servo has moved to its expected position 
+bool AP_MotorsUGV::servo_estimate() {
+    float target = 0;
+	float curr_target = 0;
+	for (uint8_t j = 0; j < 12; j++) {
+        curr_target = abs(_current_angles[j] - _last_angles[j]);
+        if (curr_target > target) {
+            target = curr_target;
+        }
+    }
+    float target_time = target * (0.24/60) * 1000;
+    return (AP_HAL::millis() - _start_time) > target_time;
+}
+
+// main_inverse_kinematics produces the inverse kinematic solution for each
+// leg joint servo by taking into consideration the initial_pos, gait offset and the body inverse kinematic values.
+void AP_MotorsUGV::main_inverse_kinematics() {
+    float ans_RB[3];
+	body_forward_kinematics(ans_RB,	_endpoint_RB[0]+_gait_pos_x[0],
+									_endpoint_RB[1]+_gait_pos_y[0], 
+									_endpoint_RB[2]+_gait_pos_z[0],
+									-_frame_len*0.5, _frame_width*0.5, 
+									_gait_rot_z[0]);
+    float angles_RB[3];
+	leg_inverse_kinematics(angles_RB,	_endpoint_RB[0]+ans_RB[0]+_gait_pos_x[0],
+										_endpoint_RB[1]+ans_RB[1]+_gait_pos_y[0], 
+										_endpoint_RB[2]+ans_RB[2]+_gait_pos_z[0]);
+    angles_RB[0] = 45 + angles_RB[0];
+
+    float ans_RF[3];
+	body_forward_kinematics(ans_RF,	_endpoint_RF[0]+_gait_pos_x[1],
+									_endpoint_RF[1]+_gait_pos_y[1],
+									_endpoint_RF[2]+_gait_pos_z[1],
+									-_frame_len*0.5, -_frame_width*0.5,
+									_gait_rot_z[1]);
+    float angles_RF[3];
+	leg_inverse_kinematics(angles_RF,	_endpoint_RF[0]-ans_RF[0]-_gait_pos_x[1],
+										_endpoint_RF[1]-ans_RF[1]-_gait_pos_y[1], 
+										_endpoint_RF[2]+ans_RF[2]+_gait_pos_z[1]);
+    angles_RF[0] = 135 + angles_RF[0];
+
+    float ans_LB[3];
+	body_forward_kinematics(ans_LB,	_endpoint_LB[0]+_gait_pos_x[2],
+									_endpoint_LB[1]+_gait_pos_y[2], 
+									_endpoint_LB[2]+_gait_pos_z[2], 
+									_frame_len*0.5, _frame_width*0.5,
+									_gait_rot_z[2]);
+    float angles_LB[3];
+	leg_inverse_kinematics(angles_LB,	_endpoint_LB[0]+ans_LB[0]+_gait_pos_x[2],
+										_endpoint_LB[1]+ans_LB[1]+_gait_pos_y[2], 
+										_endpoint_LB[2]+ans_LB[2]+_gait_pos_z[2]);
+    angles_LB[0] = -45 + angles_LB[0];
+
+    float ans_LF[3];
+	body_forward_kinematics(ans_LF,	_endpoint_LF[0]+_gait_pos_x[3],
+									_endpoint_LF[1]+_gait_pos_y[3], 
+									_endpoint_LF[2]+_gait_pos_z[3], 
+									_frame_len*0.5, -_frame_width*0.5, 
+									_gait_rot_z[3]);
+    float angles_LF[3];
+	leg_inverse_kinematics(angles_LF,	_endpoint_LF[0]-ans_LF[0]-_gait_pos_x[3],
+										_endpoint_LF[1]-ans_LF[1]-_gait_pos_y[3], 
+										_endpoint_LF[2]+ans_LF[2]+_gait_pos_z[3]);
+    angles_LF[0] = -135 + angles_LF[0];
+    gaitselect();
+    _current_angles[0] = angles_RF[0];
+	_current_angles[1] = angles_RF[1];
+	_current_angles[2] = angles_RF[2];
+	_current_angles[3] = angles_LF[0];
+	_current_angles[4] = angles_LF[1];
+	_current_angles[5] = angles_LF[2];
+	_current_angles[6] = angles_LB[0];
+	_current_angles[7] = angles_LB[1];
+	_current_angles[8] = angles_LB[2];
+	_current_angles[9] = angles_RB[0];
+	_current_angles[10] = angles_RB[1];
+	_current_angles[11] = angles_RB[2];
+
+    if (servo_estimate()) {
+        _start_time = AP_HAL::millis();
+        calc_gait_sequence();
+		for (uint8_t i = 0; i < 12; i++) {
+			_last_angles[i] = _current_angles[i];
+		}
+    }
+}
+
+// output for quadrupedsoutput_quadruped
+void AP_MotorsUGV::output_quadruped(bool armed, float steering, float throttle, float lateral, float roll, float pitch, float walking_height)
+{
+    // exit immediately if the frame type is not set to QUADRUPED
+    if (_frame_type != FRAME_TYPE_QUADRUPED) {
+        return;
+    }
+
+	// clear and set limits based on input
+    set_limits_from_input(armed, steering, throttle);
+
+    // constrain steering
+	steering = constrain_float(steering, -4500.0f, 4500.0f);
+
+	// scale throttle and steering inputs to -1 to 1
+	const float scaled_throttle = throttle / 100.0f;
+	const float scaled_lateral = lateral / 100.0f;
+	const float scaled_steering = steering / 4500.0f;
+
+	int gait_direction;
+
+	float y = scaled_throttle * _xy_travel_max;
+	float x = scaled_lateral * _xy_travel_max;
+	float yaw = scaled_steering * _yaw_travel_max;
+
+	_y_travel = abs(y);
+	_x_travel = abs(x);
+	_yaw_travel = abs(yaw);
+	
+	if (y > 0 && _y_travel > _travel_dz) {
+		gait_direction = -1;
+	}
+	else if (y < 0 && _y_travel > _travel_dz) {
+		gait_direction = 1;
+	}
+	else if (x > 0 && _x_travel > _travel_dz) {
+		gait_direction = -1;
+	}
+	else if (x < 0 && _x_travel > _travel_dz) {
+		gait_direction = 1;
+	}
+	else if (yaw > 0 && _yaw_travel > _travel_dz) {
+		gait_direction = -1;
+	}
+	else {
+		gait_direction = 1;
+	}
+
+	_body_rot_x = roll * _body_rot_max;
+	_body_rot_y = pitch * _body_rot_max;
+	_body_pos_z = walking_height * _height_max;
+
+	int servo_direction[12] = {	gait_direction *  1, -1,  1,    // front right leg (coxa, femur, tibia)
+								gait_direction *  1,  1, -1,    // front left leg (coxa, femur, tibia)
+								gait_direction * -1, -1,  1,    // back left leg (coxa, femur, tibia)
+								gait_direction * -1,  1, -1};   // back right leg (coxa, femur, tibia)
+                              
+	float* angles;
+    if (armed) {
+        main_inverse_kinematics();
+        if (_arm_step < _arm_step_max) {
+    		for (uint8_t i = 0; i < 12; i++) {
+			    _current_angles[i] = _rest_angles[i] + (((_last_angles[i] - _rest_angles[i]) * _arm_step) / _arm_step_max);
+		    }            
+            _arm_step++;
+        }
+	    angles = _current_angles;
+    } 
+	else {
+        if (_arm_step > 0) {
+            _arm_step--;
+    		for (uint8_t i = 0; i < 12; i++) {
+			    _current_angles[i] = _rest_angles[i] + (((_last_angles[i] - _rest_angles[i]) * _arm_step) / _arm_step_max);
+		    }            
+	        angles = _current_angles;
+        }
+        else {
+		    angles = _rest_angles;
+        }
+    }
+
+	SRV_Channels::set_output_pwm(SRV_Channel::k_front_right_coxa, floorf(((angles[0] * servo_direction[0] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_front_right_femur, floorf(((angles[1] * servo_direction[1] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_front_right_tibia, floorf(((angles[2] * servo_direction[2] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_front_left_coxa, floorf(((angles[3] * servo_direction[3] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_front_left_femur, floorf(((angles[4] * servo_direction[4] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_front_left_tibia, floorf(((angles[5] * servo_direction[5] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_back_left_coxa, floorf(((angles[6] * servo_direction[6] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_back_left_femur, floorf(((angles[7] * servo_direction[7] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_back_left_tibia, floorf(((angles[8] * servo_direction[8] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_back_right_coxa, floorf(((angles[9] * servo_direction[9] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_back_right_femur, floorf(((angles[10] * servo_direction[10] * 1000)/90) + 1500));
+	SRV_Channels::set_output_pwm(SRV_Channel::k_back_right_tibia, floorf(((angles[11] * servo_direction[11] * 1000)/90) + 1500));
 }
 
 // output throttle value to main throttle channel, left throttle or right throttle.  throttle should be scaled from -100 to 100

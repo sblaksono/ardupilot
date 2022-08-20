@@ -28,6 +28,7 @@ public:
         FRAME_TYPE_OMNI3 = 1,
         FRAME_TYPE_OMNIX = 2,
         FRAME_TYPE_OMNIPLUS = 3,
+        FRAME_TYPE_QUADRUPED = 4,
     };
 
     // initialise motors
@@ -164,6 +165,17 @@ private:
     // output for omni motors
     void output_omni(bool armed, float steering, float throttle, float lateral);
 
+    // output for quadrupeds
+    void setup_quadruped();
+	void gaitselect();
+	void calc_gait_sequence();
+	void update_leg(int moving_leg, int move_requested);
+	void body_forward_kinematics(float* ans, float X, float Y, float Z, float Xdist, float Ydist, float Zrot);
+	void leg_inverse_kinematics(float* res, float x, float y, float z);
+	bool servo_estimate();
+	void main_inverse_kinematics();
+    void output_quadruped(bool armed, float steering, float throttle, float lateral, float roll, float pitch, float walking_height);
+
     // output throttle (-100 ~ +100) to a throttle channel.  Sets relays if required
     // dt is the main loop time interval and is required when rate control is required
     void output_throttle(SRV_Channel::Aux_servo_function_t function, float throttle, float dt = 0.0f);
@@ -224,6 +236,62 @@ private:
     float   _steering_factor[AP_MOTORS_NUM_MOTORS_MAX];
     float   _lateral_factor[AP_MOTORS_NUM_MOTORS_MAX];
     uint8_t   _motors_num;
+
+	// quadruped parameters
+	AP_Float _frame_len;		// frame length in mm
+	AP_Float _frame_width;		// frame width in mm
+	AP_Float _coxa_len;			// distance (in mm) from coxa (aka hip) servo to femur servo
+	AP_Float _femur_len;		// distance (in mm) from femur servo to tibia servo
+	AP_Float _tibia_len;		// distance (in mm) from tibia servo to foot
+	AP_Float _body_rot_max; 	// body rotation maximum for any individual axis
+	AP_Float _xy_travel_max;	// x and y axis travel max (used to convert control input) in mm
+	AP_Float _yaw_travel_max; 	// yaw travel maximum (used to convert control input)
+	AP_Float _height_max;       // height maximum (used to convert control input)
+	AP_Float _travel_dz;        // travel deadzone.  x, y and yaw travel requests are ignored if their absolute value is less than this number
+	AP_Float _leg_lift_height;  // leg lift height (in mm) while walking
+	AP_Int8	_gait_type;			// gait pattern.  0 = alternating gait, 1 = wave gait.
+
+	// quadruped variables
+	// body position and rotation
+	float 	_body_rot_x = 0;    	// body rotation about the X axis (i.e. roll rotation)
+	float 	_body_rot_y = 0;    	// body rotation about the Y axis (i.e. pitch rotation)
+	float 	_body_rot_z = 0;    	// body rotation about the Z axis (i.e. yaw rotation)
+	float 	_body_pos_x = 0;    	// body position in the X axis (i.e. forward, back).  should be -40mm to +40mm
+	float 	_body_pos_y = 0;    	// body position in the Y axis (i.e. right, left).  should be -40mm to +40mm
+	float 	_body_pos_z = 0;    	// body position in the Z axis (i.e. up, down).  should be -40mm to +40mm
+	// starting positions of the legs
+	float	_endpoint_LB[3];
+	float	_endpoint_LF[3];
+	float	_endpoint_RF[3];
+	float	_endpoint_RB[3];
+	// travel
+	float 	_x_travel = 0;          // target lenght of gait along x
+	float 	_y_travel = 0;          // target travel of gait along y
+	float 	_yaw_travel = 0;        // yaw rotation travel target
+	// gait definition parameters
+	uint8_t	_gait_step = 0;			// gait step in execution
+	uint8_t	_gait_step_total = 0;	// number of steps in gait
+	uint8_t	_gait_step_leg_start[4] = {0,0,0,0};	// leg starts moving on this gait step (front-right, front-left, back-left, back-right)
+	uint8_t	_gait_lifted_steps = 0; // number of steps that a leg is lifted for
+	uint8_t	_gait_down_steps = 0;   // number of steps that the leg lifted needs to be put down for
+	float	_gait_lift_divisor = 0; // when a leg is lifted and brought back down the action is divided into 2 or multiple steps, so the travel distance also need to be split in between the steps to make the transition natural
+	float	_gait_half_lift_height = 0; 		// used to split lift across two steps
+	float	_gait_travel_divisor = 0;			// number of steps in the gait the leg is touching the floor, this is used as a factor to split the travel distance between the steps
+	// position
+	float	_gait_pos_x[4] = {0,0,0,0};	// X-axis position for each leg (back-right, front-right, back-left, front-left)
+	float	_gait_pos_y[4] = {0,0,0,0};	// Y-axis position for each leg (back-right, front-right, back-left, front-left)
+	float	_gait_pos_z[4] = {0,0,0,0};	// Z-axis position for each leg (back-right, front-right, back-left, front-left)
+	float	_gait_rot_z[4] = {0,0,0,0};	// Z-axis rotation for each leg (back-right, front-right, back-left, front-left)
+	uint32_t	_start_time = 0;
+	// angles
+    uint8_t _arm_step = 0;
+    uint8_t _arm_step_max = 50;
+	float	_last_angles[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+	float	_current_angles[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+	float	_rest_angles[12] = { 45, -90, 40,	// front right leg (coxa, femur, tibia)
+								-45, -90, 40,	// front left leg (coxa, femur, tibia)
+								-45, -90, 40,	// back left leg (coxa, femur, tibia)
+								45, -90, 40};	// back right leg (coxa, femur, tibia)	
 
     static AP_MotorsUGV *_singleton;
 };
