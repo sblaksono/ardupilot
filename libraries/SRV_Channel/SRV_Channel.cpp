@@ -241,6 +241,18 @@ bool SRV_Channel::should_e_stop(SRV_Channel::Aux_servo_function_t function)
     case Aux_servo_function_t::k_motor11:
     case Aux_servo_function_t::k_motor12:
     case Aux_servo_function_t::k_engine_run_enable:
+    case Aux_servo_function_t::k_front_right_coxa:
+    case Aux_servo_function_t::k_front_right_femur:
+    case Aux_servo_function_t::k_front_right_tibia:
+    case Aux_servo_function_t::k_front_left_coxa:
+    case Aux_servo_function_t::k_front_left_femur:
+    case Aux_servo_function_t::k_front_left_tibia:
+    case Aux_servo_function_t::k_back_left_coxa:
+    case Aux_servo_function_t::k_back_left_femur:
+    case Aux_servo_function_t::k_back_left_tibia:
+    case Aux_servo_function_t::k_back_right_coxa:
+    case Aux_servo_function_t::k_back_right_femur:
+    case Aux_servo_function_t::k_back_right_tibia:
         return true;
     default:
         return false;
