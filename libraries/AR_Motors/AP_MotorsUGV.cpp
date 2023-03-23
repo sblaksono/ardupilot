@@ -210,6 +210,24 @@ const AP_Param::GroupInfo AP_MotorsUGV::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("QFRAME_TIBIA", 25, AP_MotorsUGV, _tibia_len, 125.0f),
 	
+    // @Param: QREST_FEMUR
+    // @DisplayName: Femur Rest Angle
+    // @Description: Femur servo rest angle
+    // @Units: deg
+    // @Range: -90 90
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QREST_FEMUR", 26, AP_MotorsUGV, _femur_rest_angle, -90),
+	
+    // @Param: QREST_TIBIA
+    // @DisplayName: Tibia Rest Angle
+    // @Description: Tibia servo rest angle
+    // @Units: deg
+    // @Range: -90 90
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("QREST_TIBIA", 27, AP_MotorsUGV, _tibia_rest_angle, 40),
+	
     AP_GROUPEND
 };
 
@@ -888,7 +906,7 @@ void AP_MotorsUGV::output_skid_steering(bool armed, float steering, float thrott
 void AP_MotorsUGV::output_omni(bool armed, float steering, float throttle, float lateral)
 {
     // exit immediately if the frame type is set to UNDEFINED or QUADRUPED
-    if (_frame_type <= FRAME_TYPE_UNDEFINED || _frame_type >= FRAME_TYPE_QUADRUPED) {
+    if (_frame_type == FRAME_TYPE_UNDEFINED || _frame_type == FRAME_TYPE_QUADRUPED) {
         return;
     }
 
@@ -957,6 +975,15 @@ void AP_MotorsUGV::setup_quadruped() {
 	_endpoint_RB[0] = -cosf(ToRad(45))*(_coxa_len + _femur_len); 
 	_endpoint_RB[1] = sinf(ToRad(45))*(_coxa_len + _femur_len); 
 	_endpoint_RB[2] = _tibia_len;
+
+    _rest_angles[1] = _femur_rest_angle;
+    _rest_angles[2] = _tibia_rest_angle;
+    _rest_angles[4] = _femur_rest_angle;
+    _rest_angles[5] = _tibia_rest_angle;
+    _rest_angles[7] = _femur_rest_angle;
+    _rest_angles[8] = _tibia_rest_angle;
+    _rest_angles[10] = _femur_rest_angle;
+    _rest_angles[11] = _tibia_rest_angle;
 }
 
 void AP_MotorsUGV::gaitselect() {

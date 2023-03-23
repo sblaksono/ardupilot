@@ -250,6 +250,8 @@ private:
 	AP_Float _travel_dz;        // travel deadzone.  x, y and yaw travel requests are ignored if their absolute value is less than this number
 	AP_Float _leg_lift_height;  // leg lift height (in mm) while walking
 	AP_Int8	_gait_type;			// gait pattern.  0 = alternating gait, 1 = wave gait.
+    AP_Int8 _femur_rest_angle;  // femur servo rest angle
+    AP_Int8 _tibia_rest_angle;  // tibia servo rest angle
 
 	// quadruped variables
 	// body position and rotation
