@@ -19,6 +19,10 @@
 #include "esp32s3empty.h"
 #elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_ESP32_WEMOS
 #include "esp32wemos.h"
+#elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_ESP32_S3CAM
+#include "esp32s3cam.h"
+#elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_ESP32_S3XIAO
+#include "esp32s3xiao.h"
 #else
 #error "Invalid CONFIG_HAL_BOARD_SUBTYPE for esp32"
 #endif

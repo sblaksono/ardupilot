@@ -74,6 +74,8 @@
 #define HAL_BOARD_SUBTYPE_ESP32_S3DEVKIT        6007
 #define HAL_BOARD_SUBTYPE_ESP32_S3EMPTY         6008
 #define HAL_BOARD_SUBTYPE_ESP32_WEMOS           6009
+#define HAL_BOARD_SUBTYPE_ESP32_S3CAM           6010
+#define HAL_BOARD_SUBTYPE_ESP32_S3XIAO          6011
 // @LoggerEnumEnd
 
 /* InertialSensor driver types */
