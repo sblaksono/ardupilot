@@ -76,7 +76,11 @@ static Empty::RCOutput rcoutDriver;
 #else
 static ESP32::RCOutput rcoutDriver;
 #endif
+#ifdef HAL_ESP32_RCIN
 static ESP32::RCInput rcinDriver;
+#else
+static Empty::RCInput rcinDriver;
+#endif
 static ESP32::Scheduler schedulerInstance;
 static ESP32::Util utilInstance;
 static Empty::OpticalFlow opticalFlowDriver;
