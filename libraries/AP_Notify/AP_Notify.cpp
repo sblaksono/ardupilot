@@ -42,6 +42,7 @@
 #include "ProfiLED.h"
 #include "ScriptingLED.h"
 #include "DShotLED.h"
+#include "Onboard_RGB_LED.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -398,6 +399,11 @@ void AP_Notify::add_backends(void)
                                                DISCRETE_RGB_GREEN_PIN,
                                                DISCRETE_RGB_BLUE_PIN,
                                                DISCRETE_RGB_POLARITY));
+                break;
+#endif
+#if AP_NOTIFY_ONBOARD_RGB_LED_ENABLED
+            case Notify_LED_Onboard_RGB:
+                ADD_BACKEND(NEW_NOTHROW Onboard_RGB_LED());
                 break;
 #endif
         }

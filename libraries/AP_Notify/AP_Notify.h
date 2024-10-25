@@ -98,6 +98,9 @@ public:
 #if AP_NOTIFY_NEOPIXEL_ENABLED
         Notify_LED_NeoPixelRGB              = (1 << 18), // NeoPixel AdaFruit 4544 Worldsemi WS2811
 #endif
+#if AP_NOTIFY_ONBOARD_RGB_LED_ENABLED
+        Notify_LED_Onboard_RGB              = (1 << 19), // Onboard RGD LED
+#endif
         Notify_LED_MAX
     };
 
