@@ -102,6 +102,9 @@ public:
 #if HAL_WITH_IO_MCU && AP_IOMCU_PROFILED_SUPPORT_ENABLED
         Notify_LED_ProfiLED_IOMCU           = (1 << 19), // ProfiLED IOMCU
 #endif
+#if AP_NOTIFY_ONBOARD_RGB_LED_ENABLED
+        Notify_LED_Onboard_RGB              = (1 << 19), // Onboard RGD LED
+#endif
         Notify_LED_MAX
     };
 
