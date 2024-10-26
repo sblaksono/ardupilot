@@ -32,6 +32,9 @@
 #if AP_SIM_ENABLED
 #include <AP_HAL/SIMState.h>
 #endif
+#if HAL_ESP32_RCOUT_PCA9685
+#include "RCOutput_PCA9685.h"
+#endif
 #if HAL_ESP32_ADC_ADS1115
 #include "AnalogIn_ADS1115.h"
 #endif
@@ -80,6 +83,8 @@ static ESP32::Storage storageDriver;
 static ESP32::GPIO gpioDriver;
 #if AP_SIM_ENABLED
 static Empty::RCOutput rcoutDriver;
+#elif HAL_ESP32_RCOUT_PCA9685
+static ESP32::RCOutput_PCA9685 rcoutDriver(i2cDeviceManager.get_device(1, PCA9685_PRIMARY_ADDRESS), 0, 0, HAL_ESP32_RCOUT_PCA9685_OE_PIN);
 #else
 static ESP32::RCOutput rcoutDriver;
 #endif
