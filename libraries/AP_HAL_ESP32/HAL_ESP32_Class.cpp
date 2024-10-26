@@ -32,6 +32,9 @@
 #if AP_SIM_ENABLED
 #include <AP_HAL/SIMState.h>
 #endif
+#if HAL_ESP32_ADC_ADS1115
+#include "AnalogIn_ADS1115.h"
+#endif
 
 static ESP32::UARTDriver cons(0);
 #ifdef HAL_ESP32_WIFI
@@ -61,7 +64,11 @@ static Empty::DSP dspDriver;
 static ESP32::I2CDeviceManager i2cDeviceManager;
 static ESP32::SPIDeviceManager spiDeviceManager;
 #ifndef HAL_DISABLE_ADC_DRIVER
+#if HAL_ESP32_ADC_ADS1115
+static ESP32::AnalogIn_ADS1115 analogIn;
+#else
 static ESP32::AnalogIn analogIn;
+#endif
 #else
 static Empty::AnalogIn analogIn;
 #endif
